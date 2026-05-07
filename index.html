@@ -103,6 +103,8 @@
         .rule { background: #1e293b; border: 1px solid #334155; padding: 15px; border-radius: 8px; }
         .rule h4 { color: white; margin-bottom: 8px; }
         .rule p { color: #cbd5e1; font-size: 0.9em; line-height: 1.5; }
+        .score-btn { border: none; border-radius: 4px; color: white; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .score-btn:hover { opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -130,7 +132,8 @@
             observingTeam: 2,
             rallies: 0,
             currentShot: -1,
-            guessResult: null
+            guessResult: null,
+            lastShot: -1
         };
 
         function render() {
@@ -176,10 +179,14 @@
                         </div>
                         <div id="game-tab">
                             <div class="scoreboard">
-                                ${gameState.teams.map(t => `
+                                ${gameState.teams.map((t, idx) => `
                                     <div class="score-box">
                                         <div class="score-label">${t.name}</div>
                                         <div class="score-value">${t.score}</div>
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
+                                            <button class="score-btn" onclick="adjustScore(${idx}, -1)" style="background: #ef4444; padding: 6px; font-size: 0.9em;">-1</button>
+                                            <button class="score-btn" onclick="adjustScore(${idx}, 1)" style="background: #10b981; padding: 6px; font-size: 0.9em;">+1</button>
+                                        </div>
                                     </div>
                                 `).join('')}
                             </div>
@@ -223,8 +230,8 @@
                                                 <button class="btn-danger" onclick="recordGuess(false)">Incorrect</button>
                                             </div>
                                         ` : `
-                                            <div style="color: ${gameState.guessResult.includes('+') ? '#10b981' : '#ef4444'}; font-size: 1.5em; font-weight: bold; margin-top: 15px;">
-                                                ${gameState.guessResult} Points
+                                            <div style="color: ${gameState.guessResult === 'correct' ? '#10b981' : '#ef4444'}; font-size: 1.5em; font-weight: bold; margin-top: 15px;">
+                                                ${gameState.guessResult === 'correct' ? 'Correct!' : 'Incorrect'}
                                             </div>
                                         `}
                                     </div>
@@ -271,20 +278,28 @@
         }
 
         function generateShot() {
-            gameState.currentShot = Math.floor(Math.random() * SHOTS.length);
+            let newShot = Math.floor(Math.random() * SHOTS.length);
+            while (newShot === gameState.lastShot && SHOTS.length > 1) {
+                newShot = Math.floor(Math.random() * SHOTS.length);
+            }
+            gameState.currentShot = newShot;
+            gameState.lastShot = newShot;
             gameState.guessResult = null;
             render();
         }
 
         function recordGuess(correct) {
-            const points = correct ? 10 : -3;
-            gameState.teams[gameState.observingTeam].score = Math.max(0, gameState.teams[gameState.observingTeam].score + points);
-            gameState.guessResult = correct ? '+10' : '-3';
+            gameState.guessResult = correct ? 'correct' : 'incorrect';
             gameState.rallies++;
             render();
             if (gameState.rallies >= 3) {
                 setTimeout(() => spinRacket(), 1500);
             }
+        }
+
+        function adjustScore(teamIdx, amount) {
+            gameState.teams[teamIdx].score = Math.max(0, gameState.teams[teamIdx].score + amount);
+            render();
         }
 
         function switchTab(tab) {
